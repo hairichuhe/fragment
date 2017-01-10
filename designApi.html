@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>js程序高水平api设计</title>
+	<meta charset="utf-8">
+	<style type="text/css">
+		#traffic > li{
+		  display: block;
+		}
+
+		#traffic span{
+		  display: inline-block;
+		  width: 50px;
+		  height: 50px;
+		  background-color: gray;
+		  margin: 5px;
+		  border-radius: 50%;
+		}
+
+		#traffic.stop li:nth-child(1) span{
+		  background-color: #a00;
+		}
+
+		#traffic.wait li:nth-child(2) span{
+		  background-color: #aa0;
+		}
+
+		#traffic.pass li:nth-child(3) span{
+		  background-color: #0a0;
+		}
+	</style>
+</head>
+<body>
+<ul id="traffic" class="wait">
+  <li><span></span></li>
+  <li><span></span></li>
+  <li><span></span></li>
+</ul>
+<!-- <script type="text/javascript">
+// 版本四
+const traffic = document.getElementById("traffic");
+
+function poll(...fnList){
+  let stateIndex = 0;
+
+  return function(...args){
+    let fn = fnList[stateIndex++ % fnList.length];
+    return fn.apply(this, args);
+  }
+}
+
+function setState(state){
+  traffic.className = state;
+}
+
+let trafficStatePoll = poll(setState.bind(null, "wait"),
+                            setState.bind(null, "stop"),
+                            setState.bind(null, "pass"));
+
+setInterval(trafficStatePoll, 2000);
+</script> -->
+<!-- <script type="text/javascript">
+// 版本五
+const traffic = document.getElementById("traffic");
+
+function wait(time){
+	return new Promise(resolve => setTimeout(resolve,time))
+};
+
+function setState(state){
+	traffic.className = state;
+};
+
+function reset(){
+	Promise.resolve()
+	.then(setState.bind(null,"wait"))
+	.then(wait.bind(null,1000))
+	.then(setState.bind(null,"stop"))
+	.then(wait.bind(null,2000))
+	.then(setState.bind(null,"pass"))
+	.then(wait.bind(null,3000))
+	.then(reset)
+};
+
+reset();
+</script> -->
+<script type="text/javascript">
+// 版本六
+const trafficEl = document.getElementById("traffic");
+
+function TrafficProtocol(el, reset){
+  this.subject = el;
+  this.autoReset = reset;
+  this.stateList = [];
+}
+
+TrafficProtocol.prototype.putState = function(fn){
+  this.stateList.push(fn);
+}
+
+TrafficProtocol.prototype.reset = function(){
+  let subject = this.subject;
+
+  this.statePromise = Promise.resolve();
+  this.stateList.forEach((stateFn) => {
+    this.statePromise = this.statePromise.then(()=>{
+      return new Promise(resolve => {
+        stateFn(subject, resolve);
+      });
+    });
+  });
+  if(this.autoReset){
+    this.statePromise.then(this.reset.bind(this));
+  }
+}
+
+TrafficProtocol.prototype.start = function(){
+  this.reset();
+}
+
+var traffic = new TrafficProtocol(trafficEl, true);
+
+traffic.putState(function(subject, next){
+  subject.className = "wait";
+  setTimeout(next, 1000);
+});
+
+traffic.putState(function(subject, next){
+  subject.className = "stop";
+  setTimeout(next, 2000);
+});
+
+traffic.putState(function(subject, next){
+  subject.className = "pass";
+  setTimeout(next, 3000);
+});
+
+traffic.start();
+</script>
+</body>
+</html>
